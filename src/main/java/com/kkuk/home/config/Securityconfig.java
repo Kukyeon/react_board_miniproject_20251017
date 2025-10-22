@@ -2,7 +2,6 @@ package com.kkuk.home.config;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -15,64 +14,87 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+
 import jakarta.servlet.http.HttpServletResponse;
 
-@Configurable
 @Configuration
-@EnableWebSecurity
-public class Securityconfig {
-	//회원가입
-	   @Bean
-	   public SecurityFilterChain fiteChain(HttpSecurity http) throws Exception {
-	      http
-	      .csrf(csrf -> csrf.disable()) //csrf 인증을 비활성화->리액트, vue 같은 프론트엔+백엔드 구조->불필요
-	      .cors(Customizer.withDefaults()) //cors->활성화
-	        .authorizeHttpRequests(auth -> auth
-	            .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/board",
-	            		"/api/board/**", "/api/comments", "/api/comments/**").permitAll()
-	            .anyRequest().authenticated()
+@EnableWebSecurity //모든 요청 url이 스프링 시큐리티의 제어를 받도록 하는 annotation
+public class Securityconfig {	
+	
+	@Bean
+	   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+	       http
+	           .csrf(csrf -> csrf.disable())  //새 방식 (람다 DSL)
+	           .cors(Customizer.withDefaults())
+	           .authorizeHttpRequests(auth -> auth
+	                 .requestMatchers(
+	                       "/", 
+	                       "/index.html", 
+	                       "/login", 
+	                       "/signup",
+	                       "/api/auth/signup",
+	                       "/board/**", 
+	                       "/static/**")
+	                 .permitAll()                   
+	                   // 읽기 API는 로그인 없이 허용
+	                   .requestMatchers(
+	                         "/api/board", 
+	                         "/api/board/**", 
+	                         "/api/comments", 
+	                         "/api/comments/**")
+	                   .permitAll()
+	                   
+	                   // 쓰기/수정/삭제 API는 인증 필요
+	                   .requestMatchers(
+	                         "/api/board/write", 
+	                         "/api/board/update/**", 
+	                         "/api/board/delete/**")
+	                   .authenticated()
+	                   .requestMatchers(
+	                         "/api/comments/write", 
+	                         "/api/comments/delete/**")
+	                   .authenticated()           
+	               .anyRequest().authenticated()
+	           )         
+	           .formLogin(login -> login    
+	              .loginPage("/login").permitAll()   
+	               .loginProcessingUrl("/api/auth/login")
+	               .usernameParameter("username")
+	               .passwordParameter("password")
+	               .successHandler((req, res, auth) -> res.setStatus(HttpServletResponse.SC_OK))
+	               .failureHandler((req, res, ex) -> res.setStatus(HttpServletResponse.SC_UNAUTHORIZED))
+	           )
+	           .logout(logout -> logout
+	               .logoutUrl("/api/auth/logout")
+	               .logoutSuccessHandler((req, res, auth) -> res.setStatus(HttpServletResponse.SC_OK))
+	           ); 
 	      
-	              
-	        )
-	        .formLogin(login -> login
-	        	
-	            .loginProcessingUrl("/api/auth/login") //로그인 요청 url
-	            .usernameParameter("username")
-	            .passwordParameter("password")
-	            //로그인이 성공시 -> ok -> 200
-	            .successHandler((req, res, auth) -> res.setStatus(HttpServletResponse.SC_OK))
-	            //로그인이 실패시 -> fail -> 401
-	            .failureHandler((req, res, ex) -> res.setStatus(HttpServletResponse.SC_UNAUTHORIZED))            
-	            
-	        )
-	        .logout(logout -> logout
-	           .logoutUrl("/api/auth/logout") //로그아웃 요청이 들어오는 url
-	           .logoutSuccessHandler((req, res, auth) -> res.setStatus(HttpServletResponse.SC_OK))
-	           //로그아웃 성공시 200 응답
-	            
-	        );
 
-	    return http.build();
+	       return http.build();
 	   }
-	   
-	   @Bean
-	   public PasswordEncoder passwordEncoder() {
-	      return new BCryptPasswordEncoder();
-	   }
-	   
-	   
-	   
-	   //프론트엔드 리액트에서 요청하는 주소 허용
-	   @Bean
-	    public CorsConfigurationSource corsConfigurationSource() {
-	        CorsConfiguration config = new CorsConfiguration();
-	        config.setAllowedOrigins(List.of("http://localhost:3000")); // React 개발 서버
-	        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-	        config.setAllowedHeaders(List.of("*"));
-	        config.setAllowCredentials(true); // 쿠키, 세션 허용 시 필요
 
-	        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-	        source.registerCorsConfiguration("/**", config);
-	        return source;
-	    }
+@Bean
+public PasswordEncoder passwordEncoder() {
+   return new BCryptPasswordEncoder();
+}
+
+
+
+//프론트엔드 리액트에서 요청하는 주소 허용
+@Bean
+ public CorsConfigurationSource corsConfigurationSource() {
+     CorsConfiguration config = new CorsConfiguration();
+     config.setAllowedOrigins(List.of("http://localhost:3000",
+     								"http://localhost:8888",
+     								"http://172.30.1.36:8888",
+     								"http://172.30.1.36:3000")); // React 개발 서버
+     config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+     config.setAllowedHeaders(List.of("*"));
+     config.setAllowCredentials(true); // 쿠키, 세션 허용 시 필요
+
+     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+     source.registerCorsConfiguration("/**", config);
+     return source;
+ }
+	
 }

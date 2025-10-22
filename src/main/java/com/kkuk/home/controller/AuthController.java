@@ -46,7 +46,7 @@ public class AuthController {
 		}
 		User user = new User();
 		user.setUsername(siteUserDto.getUsername());
-		user.setUsername(siteUserDto.getPassword());
+		user.setPassword(siteUserDto.getPassword());
 		
 		if(userRepository.findByUsername(user.getUsername()).isPresent()) {
 			Map<String, String> error = new HashMap<>();

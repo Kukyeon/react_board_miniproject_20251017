@@ -7,12 +7,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class PostDto {
+public class BoardDto {
 	@NotBlank(message = "제목을 입력해 주세요")
 	@Size(min = 5, message = "글 제목은 최소 5글자 이상이여야합니다.")
 	private String title;

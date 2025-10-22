@@ -13,7 +13,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class SiteUserDto {
 	@NotBlank(message = "아이디를 입력해 주세요.")
-	@Size(min = 4, message = "아이디는 최소 4글자 이상입니다.")
+	@Size(min = 3, message = "아이디는 최소 3글자 이상입니다.")
 	private String username;
 	
 	@NotBlank(message = "비밀번호를 입력해 주세요.")

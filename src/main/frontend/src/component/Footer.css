@@ -1,0 +1,31 @@
+/* 풋터 */
+.footer {
+  background-color: #444749;
+  color: white;
+  padding: 12px 24px;
+  text-align: center;
+  font-family: "Poor Story", sans-serif;
+  margin-top: 40px;
+}
+
+.footer-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-menu {
+  display: flex;
+  gap: 16px;
+}
+
+.footer-menu a {
+  color: white;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.footer-menu a:hover {
+  text-decoration: underline;
+}

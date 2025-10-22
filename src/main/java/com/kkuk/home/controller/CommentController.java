@@ -20,11 +20,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.kkuk.home.dto.CommentDto;
+import com.kkuk.home.entity.Board;
 import com.kkuk.home.entity.Comment;
-import com.kkuk.home.entity.Post;
+
 import com.kkuk.home.entity.User;
+import com.kkuk.home.repository.BoardRepository;
 import com.kkuk.home.repository.CommentRepository;
-import com.kkuk.home.repository.PostRepository;
+
 import com.kkuk.home.repository.UserRepository;
 
 import jakarta.validation.Valid;
@@ -41,11 +43,11 @@ public class CommentController {
 	private UserRepository userRepository;
 	
 	@Autowired
-	private PostRepository postRepository;
+	private BoardRepository boardRepository;
 	
-	@PostMapping("/{postId}")
+	@PostMapping("/{boardId}")
 	public ResponseEntity<?> writeComment(
-			@PathVariable("postId") Long postId, @Valid @RequestBody CommentDto commentDto,
+			@PathVariable("boardId") Long boardId, @Valid @RequestBody CommentDto commentDto,
 			BindingResult bindingResult, Authentication auth){
 		
 		if(bindingResult.hasErrors()) { 
@@ -58,8 +60,8 @@ public class CommentController {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
 		}
 		
-		Optional<Post> _post = postRepository.findById(postId);
-		if(_post.isEmpty()) {
+		Optional<Board> _board = boardRepository.findById(boardId);
+		if(_board.isEmpty()) {
 			Map<String, String> error = new HashMap<>();
 			error.put("boardError", "해당 게시글이 존재하지 않습니다.");
 			
@@ -69,8 +71,8 @@ public class CommentController {
 		 User user = userRepository.findByUsername(auth.getName()).orElseThrow();
 		 
 		 Comment comment = new Comment();
-		 comment.setPost(_post.get());
-		 comment.setUser(user);
+		 comment.setBoard(_board.get());
+		 comment.setAuthor(user);
 		 comment.setContent(commentDto.getContent());
 		 
 		 commentRepository.save(comment);
@@ -78,15 +80,15 @@ public class CommentController {
 		 return ResponseEntity.ok(comment);
 	}
 	
-	@GetMapping("/{postId}")
-	public ResponseEntity<?> getComments(@PathVariable("postId") Long postId){
+	@GetMapping("/{boardId}")
+	public ResponseEntity<?> getComments(@PathVariable("boardId") Long boardId){
 		
-		Optional<Post> _post = postRepository.findById(postId);
-		if(_post.isEmpty()) {
+		Optional<Board> _board = boardRepository.findById(boardId);
+		if(_board.isEmpty()) {
 			return ResponseEntity.badRequest().body("해당 게시글이 존재하지 않습니다.");
 		}
 		
-		List<Comment> comments = commentRepository.findByPost(_post.get());
+		List<Comment> comments = commentRepository.findByBoard(_board.get());
 		
 		return ResponseEntity.ok(comments);
 		
@@ -97,7 +99,7 @@ public class CommentController {
 			@RequestBody CommentDto commentDto, Authentication auth){
 		
 		Comment comment = commentRepository.findById(commentId).orElseThrow();
-		if(!comment.getUser().getUsername().equals(auth.getName())) {
+		if(!comment.getAuthor().getUsername().equals(auth.getName())) {
 			return ResponseEntity.status(403).body("수정 권한이 없습니다.");
 		}
 		comment.setContent(commentDto.getContent());
@@ -112,7 +114,7 @@ public class CommentController {
 		if(_comment.isEmpty()) {
 			return ResponseEntity.status(404).body("삭제 실패 댓글 존재여부 확인");
 		}
-		if(!_comment.get().getUser().getUsername().equals(auth.getName())) {
+		if(!_comment.get().getAuthor().getUsername().equals(auth.getName())) {
 			return ResponseEntity.status(403).body("삭제 실패 권한 여부 확인");
 		}
 		

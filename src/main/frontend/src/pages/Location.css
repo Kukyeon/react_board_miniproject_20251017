@@ -1,0 +1,28 @@
+.location-container {
+  padding: 40px 20px;
+  background-color: #f9f9f9;
+}
+
+.location-container h2 {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.location-content {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 30px;
+}
+
+.map-container {
+  flex: 1 1 400px;
+  min-width: 300px;
+}
+
+.location-text {
+  flex: 1 1 300px;
+  min-width: 250px;
+  font-size: 1rem;
+  line-height: 1.6;
+}

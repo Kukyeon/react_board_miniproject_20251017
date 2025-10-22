@@ -1,7 +1,7 @@
 package com.kkuk.home.controller;
 
-
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -25,57 +25,66 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.kkuk.home.dto.PostDto;
-import com.kkuk.home.entity.Post;
+import com.kkuk.home.dto.BoardDto;
+
+import com.kkuk.home.entity.Board;
+
 import com.kkuk.home.entity.User;
+import com.kkuk.home.repository.BoardRepository;
 import com.kkuk.home.repository.CommentRepository;
-import com.kkuk.home.repository.PostRepository;
+
 import com.kkuk.home.repository.UserRepository;
 
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/Post")
-public class PostController {
-	
+@RequestMapping("/api/board")
+public class BoardController {
 	@Autowired
 	private CommentRepository commentRepository;
 	
 	@Autowired
-	private PostRepository postRepository;
+	private BoardRepository boardRepository;
 	
 	@Autowired
 	private UserRepository userRepository;
 	
-	PostController(CommentRepository commentRepository){
+	BoardController(CommentRepository commentRepository){
 		this.commentRepository = commentRepository;
 	}
 	
 	@GetMapping
 	public ResponseEntity<?> pageList(@RequestParam(name = "page", defaultValue = "0") int page,
-			@RequestParam(name = "size", defaultValue = "10") int size) {
-		if(page < 0) {
-			page = 0;
-		}
-		if(size <= 0) {
-			size = 10;
-		}
-		
-		Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
-		Page<Post> postPage = postRepository.findAll(pageable);
-		
-		Map<String, Object> pageResponse = new HashMap<>();
-		pageResponse.put("posts", postPage.getContent()); 
-		pageResponse.put("currentPage", postPage.getNumber()); 
-		pageResponse.put("totalPages", postPage.getTotalPages()); 
-		pageResponse.put("totalItems", postPage.getTotalElements()); 
-		//{"currentPage":3, totalPages:57}
-		
-		return ResponseEntity.ok(pageResponse);
+            @RequestParam(name = "size", defaultValue = "10") int size) {
+	if(page < 0) page = 0;
+	if(size <= 0) size = 10;
+	
+	Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+	Page<Board> boardPage = boardRepository.findAll(pageable);
+
+// 게시글 + 댓글 수 매핑
+	List<Map<String, Object>> postsWithCommentCount = boardPage.getContent().stream().map(board -> {
+	Map<String, Object> map = new HashMap<>();
+	map.put("id", board.getId());
+	map.put("title", board.getTitle());
+	map.put("author", board.getAuthor());
+	map.put("createDate", board.getCreateDate());
+	map.put("viewCount", board.getViewCount());
+	map.put("commentCount", commentRepository.countByBoard(board)); // 댓글 수
+	return map;
+	}).toList();
+	
+	Map<String, Object> pageResponse = new HashMap<>();
+	pageResponse.put("posts", postsWithCommentCount);
+	pageResponse.put("currentPage", boardPage.getNumber());
+	pageResponse.put("totalPages", boardPage.getTotalPages());
+	pageResponse.put("totalItems", boardPage.getTotalElements());
+	
+	return ResponseEntity.ok(pageResponse);
 	}
 	
 	@PostMapping
-	public ResponseEntity<?> write(@Valid @RequestBody PostDto postDto, 
+	public ResponseEntity<?> write(@Valid @RequestBody BoardDto boardDto, 
 									BindingResult bindingResult, 
 									Authentication auth) {
 		
@@ -97,22 +106,25 @@ public class PostController {
 				.orElseThrow(()->new UsernameNotFoundException("사용자 없음"));
 		
 		
-		Post post = new Post();
-		post.setTitle(postDto.getTitle());
-		post.setContent(postDto.getContent());
-		post.setUser(user);
+		Board board = new Board();
+		board.setTitle(boardDto.getTitle());
+		board.setContent(boardDto.getContent());
+		board.setAuthor(user);
 		
-		postRepository.save(post);
+		boardRepository.save(board);
 		
-		return ResponseEntity.ok(post);
+		return ResponseEntity.ok(board);
 	}
 	
 	
 	@GetMapping("/{id}")
 	public ResponseEntity<?> getPost(@PathVariable("id") Long id) {
-		Optional<Post> _post = postRepository.findById(id);
-		if(_post.isPresent()) { 
-			return ResponseEntity.ok(_post.get()); 
+		Optional<Board> _board = boardRepository.findById(id);
+		if(_board.isPresent()) { 
+			 Board board = _board.get();
+			 board.setViewCount(board.getViewCount() + 1);
+			 boardRepository.save(board);
+			 return ResponseEntity.ok(board);
 		} else { 
 			return ResponseEntity.status(404).body("해당 게시글은 존재하지 않습니다.");
 		}
@@ -123,17 +135,17 @@ public class PostController {
 	@DeleteMapping("/{id}")
 	public ResponseEntity<?> deletePost(@PathVariable("id") Long id, Authentication auth) {
 
-		Optional<Post> _post = postRepository.findById(id);	
+		Optional<Board> _board = boardRepository.findById(id);	
 		
-		if (_post.isEmpty()) { //참이면 삭제할 글이 존재하지 않음			
+		if (_board.isEmpty()) { //참이면 삭제할 글이 존재하지 않음			
 			return ResponseEntity.status(404).body("삭제실패 게시글 여부 확인 요망");
 		}
 		
-		if (auth == null || !auth.getName().equals(_post.get().getUser().getUsername())) {
+		if (auth == null || !auth.getName().equals(_board.get().getAuthor().getUsername())) {
 			return ResponseEntity.status(403).body("삭제실패 권한 여부 확인 요망");
 		}
 		
-		postRepository.delete(_post.get());
+		boardRepository.delete(_board.get());
 		return ResponseEntity.ok("글 삭제 성공");
 		
 	} 
@@ -142,27 +154,28 @@ public class PostController {
 	@PutMapping("/{id}")
 	public ResponseEntity<?> updatePost(
 			@PathVariable("id") Long id, 
-			@RequestBody Post updatePost, 
+			@RequestBody Board updateBoard, 
 			Authentication auth) {
 		
-		Optional<Post> _post = postRepository.findById(id);
+		Optional<Board> _board = boardRepository.findById(id);
 		
-		if (_post.isEmpty()) { //참이면 수정할 글이 존재하지 않음
+		if (_board.isEmpty()) { //참이면 수정할 글이 존재하지 않음
 			return ResponseEntity.status(404).body("해당 게시글이 존재하지 않습니다.");
 		}
 		
-		if (auth == null || !auth.getName().equals(_post.get().getUser().getUsername())) {
+		if (auth == null || !auth.getName().equals(_board.get().getAuthor().getUsername())) {
 			return ResponseEntity.status(403).body("해당 글에 대한 수정 권한이 없습니다.");
 		}
 		
-		Post oldPost = _post.get(); //기존 게시글
+		Board oldPost = _board.get(); //기존 게시글
 		
-		oldPost.setTitle(updatePost.getTitle()); //제목 수정
-		oldPost.setContent(updatePost.getContent()); //내용 수정
+		oldPost.setTitle(updateBoard.getTitle()); //제목 수정
+		oldPost.setContent(updateBoard.getContent()); //내용 수정
 		
-		postRepository.save(oldPost); //수정한 내용 저장
+		boardRepository.save(oldPost); //수정한 내용 저장
 		
 		return ResponseEntity.ok(oldPost); //수정된 내용이 저장된 글 객체 반환
 	}
+	
 	
 }
