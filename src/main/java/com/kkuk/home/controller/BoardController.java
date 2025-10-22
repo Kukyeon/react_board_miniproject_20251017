@@ -131,7 +131,7 @@ public class BoardController {
 		
 	}
 	
-	//특정 id 글 삭제(삭제권한->로그인한 후 본인 글만 삭제 가능)
+	
 	@DeleteMapping("/{id}")
 	public ResponseEntity<?> deletePost(@PathVariable("id") Long id, Authentication auth) {
 
@@ -150,7 +150,7 @@ public class BoardController {
 		
 	} 
 	
-	//게시글 수정(권한 설정->로그인 후 본인 작성글만 수정 가능)
+	
 	@PutMapping("/{id}")
 	public ResponseEntity<?> updatePost(
 			@PathVariable("id") Long id, 
@@ -167,14 +167,14 @@ public class BoardController {
 			return ResponseEntity.status(403).body("해당 글에 대한 수정 권한이 없습니다.");
 		}
 		
-		Board oldPost = _board.get(); //기존 게시글
+		Board oldPost = _board.get(); 
 		
-		oldPost.setTitle(updateBoard.getTitle()); //제목 수정
-		oldPost.setContent(updateBoard.getContent()); //내용 수정
+		oldPost.setTitle(updateBoard.getTitle());
+		oldPost.setContent(updateBoard.getContent());
 		
-		boardRepository.save(oldPost); //수정한 내용 저장
+		boardRepository.save(oldPost); 
 		
-		return ResponseEntity.ok(oldPost); //수정된 내용이 저장된 글 객체 반환
+		return ResponseEntity.ok(oldPost);
 	}
 	
 	
