@@ -43,7 +43,7 @@ public class Securityconfig {
 	                         "/api/comments", 
 	                         "/api/comments/**")
 	                   .permitAll()
-	                   
+	                   // 아니면 아예 /api/** 으로 하면 모든 요청 다 가능
 	                   // 쓰기/수정/삭제 API는 인증 필요
 	                   .requestMatchers(
 	                         "/api/board/write", 
